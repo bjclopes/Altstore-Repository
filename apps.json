@@ -1,11 +1,11 @@
 {
   "name": "YouMod Repo",
-  "identifier": "com.MountainofPenguin.org",
+  "identifier": "com.bjclopes.org",
   "apiVersion": "v2",
   "subtitle": "Automated YouMod builds for Signulous",
   "description": "Auto-built YouMod IPA \u2014 updated whenever a new YouTube version is available.",
-  "iconURL": "https://raw.githubusercontent.com/MountainofPenguin/Altstore-Repository/main/assets/IMG_2642.png",
-  "website": "https://github.com/MountainofPenguin/Altstore-Repository",
+  "iconURL": "https://raw.githubusercontent.com/bjclopes/Altstore-Repository/main/assets/YouTubeIcon.png",
+  "website": "https://github.com/bjclopes/Altstore-Repository/",
   "apps": [
     {
       "name": "YouMod",
@@ -13,7 +13,7 @@
       "developerName": "Tonwalter888",
       "subtitle": "YouTube with YouMod tweaks",
       "localizedDescription": "YouMod brings back YTLite-style features: ad removal, background playback, UI customisation, and more \u2014 without a paywall. Bundled with YTUHD (+ YTVideoOverlay), Return YouTube Dislikes and DontEatMyContent.",
-      "iconURL": "https://raw.githubusercontent.com/MountainofPenguin/Altstore-Repository/main/assets/YouTube Icon.png",
+      "iconURL": "https://raw.githubusercontent.com/bjclopes/Altstore-Repository/main/assets/YouTubeIcon.png",
       "tintColor": "FF0000",
       "screenshots": [],
       "versions": [
