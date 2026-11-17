@@ -51,11 +51,11 @@ dependency of YTUHD (its reload button registers through YTVideoOverlay), so it 
 This repo builds and publishes a new YouMod IPA automatically.
 
 ```
-Scheduled workflow checks for a new YouMod release (every 2 hours)
+Scheduled workflow checks for a new commit on YouMod's pre-release branch (every 2 hours)
         ↓
-config.yml is bumped to the new YouMod version
+config.yml is bumped to the new commit and version
         ↓
-GitHub Actions compiles the four tweaks from source
+GitHub Actions compiles the tweaks from source (YouMod from that exact commit)
         ↓
 cyan injects them into the decrypted YouTube IPA
         ↓
