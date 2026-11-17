@@ -27,6 +27,10 @@ jobs:
         run: |
           YT_URL=$(python3 -c "import re; line=open('config.yml').read(); print(re.search(r'youtube_ipa_url:\s*[\"\'](.*?)[\"\']', line).group(1))")
           YT_VER=$(python3 -c "import re; line=open('config.yml').read(); print(re.search(r'youtube_version:\s*[\"\'](.*?)[\"\']', line).group(1))")
+          YM_BRANCH=$(python3 -c "import re; line=open('config.yml').read(); m=re.search(r'youmod_branch:\s*[\"\'](.*?)[\"\']', line); print(m.group(1) if m else 'pre-release')")
+          YM_COMMIT=$(python3 -c "import re; line=open('config.yml').read(); m=re.search(r'youmod_commit:\s*[\"\'](.*?)[\"\']', line); print(m.group(1) if m else '')")
+          echo "ym_branch=$YM_BRANCH" >> $GITHUB_OUTPUT
+          echo "ym_commit=$YM_COMMIT" >> $GITHUB_OUTPUT
           echo "yt_url=$YT_URL" >> $GITHUB_OUTPUT
           echo "yt_ver=$YT_VER" >> $GITHUB_OUTPUT
           echo "tag=v$YT_VER" >> $GITHUB_OUTPUT
@@ -108,7 +112,17 @@ jobs:
 
       # ── Tweak sources ──────────────────────────────────────────────────────
       - name: Clone YouMod
-        run: git clone --quiet --depth=1 https://github.com/Tonwalter888/YouMod.git
+        run: |
+          git clone --quiet --branch "${{ steps.cfg.outputs.ym_branch }}" https://github.com/Tonwalter888/YouMod.git
+          cd YouMod
+          # Build the exact commit the check workflow detected (falls back to branch head)
+          if [ -n "${{ steps.cfg.outputs.ym_commit }}" ]; then
+            git checkout --quiet "${{ steps.cfg.outputs.ym_commit }}"
+          fi
+          SHA=$(git rev-parse HEAD)
+          echo "YOUMOD_SHA=$SHA" >> $GITHUB_ENV
+          echo "YOUMOD_SHORT=${SHA:0:7}" >> $GITHUB_ENV
+          echo "Building YouMod commit $SHA"
 
       # YTUHD is a YTVideoOverlay plugin: ReloadVideo.x imports ../YTVideoOverlay/Init.x
       # and its %ctor calls into YTVideoOverlay, so the sources must sit side by side and
@@ -139,21 +153,10 @@ jobs:
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
           mv packages/*.deb ${{ github.workspace }}/ytvo.deb
 
+      # Pre-release commits have no release notes, so use recent commit messages instead.
       - name: Get YouMod changelog
         run: |
-          CHANGELOG=$(curl -s "https://api.github.com/repos/Tonwalter888/YouMod/releases/latest" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            | python3 -c "
-          import sys, json, re
-          data = json.load(sys.stdin)
-          body = data.get('body', '')
-          # Strip markdown hyperlinks but keep the text
-          body = re.sub(r'__\[([^\]]+)\]\([^)]+\)__', r'\1', body)
-          body = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', body)
-          # Strip bold/italic markers
-          body = re.sub(r'[_*]{1,2}([^_*]+)[_*]{1,2}', r'\1', body)
-          print(body.strip())
-          ")
+          CHANGELOG=$(git -C YouMod log -10 --no-merges --pretty='- %s')
           echo "YOUMOD_CHANGELOG<<EOF" >> $GITHUB_ENV
           echo "$CHANGELOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -189,7 +192,7 @@ jobs:
           done
           echo "Injecting: $tweaks"
           cyan -i youtube.ipa \
-               -o "YouMod_${{ env.YOUMOD_VERSION }}_${{ steps.cfg.outputs.yt_ver }}.ipa" \
+               -o "YouMod_${{ env.YOUMOD_VERSION }}-pre-${{ env.YOUMOD_SHORT }}_${{ steps.cfg.outputs.yt_ver }}.ipa" \
                -uwef $tweaks \
                -n "YouTube" \
                -b com.google.ios.youtube
@@ -197,21 +200,21 @@ jobs:
       - name: Get IPA size
         id: size
         run: |
-          SIZE=$(stat -f%z "${{ github.workspace }}/YouMod_${{ env.YOUMOD_VERSION }}_${{ steps.cfg.outputs.yt_ver }}.ipa")
+          SIZE=$(stat -f%z "${{ github.workspace }}/YouMod_${{ env.YOUMOD_VERSION }}-pre-${{ env.YOUMOD_SHORT }}_${{ steps.cfg.outputs.yt_ver }}.ipa")
           echo "size=$SIZE" >> $GITHUB_OUTPUT
 
       # ── Release ────────────────────────────────────────────────────────────
       - name: Upload IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.YOUMOD_VERSION }}
-          name: "YouMod ${{ env.YOUMOD_VERSION }}"
+          tag_name: v${{ env.YOUMOD_VERSION }}-pre-${{ env.YOUMOD_SHORT }}
+          name: "YouMod ${{ env.YOUMOD_VERSION }} (pre-release ${{ env.YOUMOD_SHORT }})"
+          prerelease: true
           body: |
             Auto-updated YouMod IPA for YouTube ${{ steps.cfg.outputs.yt_ver }}
-            YouMod version: ${{ env.YOUMOD_VERSION }}
+            YouMod version: ${{ env.YOUMOD_VERSION }} (pre-release branch, commit ${{ env.YOUMOD_SHA }})
             Built by GitHub Actions run ${{ github.run_id }}
-          files: ${{ github.workspace }}/YouMod_${{ env.YOUMOD_VERSION }}_${{ steps.cfg.outputs.yt_ver }}.ipa
-          make_latest: true
+          files: ${{ github.workspace }}/YouMod_${{ env.YOUMOD_VERSION }}-pre-${{ env.YOUMOD_SHORT }}_${{ steps.cfg.outputs.yt_ver }}.ipa
 
       # ── AltStore repo update ────────────────────────────────────────────────
       - name: Update AltStore repo JSON
@@ -219,11 +222,13 @@ jobs:
           export TODAY=$(date -u +%Y-%m-%d)
           export YT_VER="${{ steps.cfg.outputs.yt_ver }}"
           export YOUMOD_VERSION="${{ env.YOUMOD_VERSION }}"
-          export IPA_NAME="YouMod_${{ env.YOUMOD_VERSION }}_${{ steps.cfg.outputs.yt_ver }}.ipa"
+          export YOUMOD_SHORT="${{ env.YOUMOD_SHORT }}"
+          export BUILD_NUM="${{ github.run_number }}"
+          export IPA_NAME="YouMod_${{ env.YOUMOD_VERSION }}-pre-${{ env.YOUMOD_SHORT }}_${{ steps.cfg.outputs.yt_ver }}.ipa"
           export SIZE="${{ steps.size.outputs.size }}"
           REPO_USER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
-          export DOWNLOAD_URL="https://github.com/$REPO_USER/$REPO_NAME/releases/download/v$YOUMOD_VERSION/$IPA_NAME"
+          export DOWNLOAD_URL="https://github.com/$REPO_USER/$REPO_NAME/releases/download/v$YOUMOD_VERSION-pre-$YOUMOD_SHORT/$IPA_NAME"
       
           python3 << 'PYEOF'
           import json, os
@@ -235,13 +240,15 @@ jobs:
           size       = int(os.environ.get('SIZE', 0))
           changelog  = os.environ.get('YOUMOD_CHANGELOG', '').strip()
       
-          description = f"YouTube {yt_ver} + YouMod v{youmod_ver}\n\n{changelog}" if changelog else f"Auto-built from YouTube {yt_ver} with YouMod v{youmod_ver}"
+          short      = os.environ.get('YOUMOD_SHORT', '')
+          build_num  = os.environ.get('BUILD_NUM', '')
+          description = f"YouTube {yt_ver} + YouMod v{youmod_ver} (pre-release {short})\n\n{changelog}" if changelog else f"Auto-built from YouTube {yt_ver} with YouMod v{youmod_ver} (pre-release {short})"
       
           with open('apps.json') as f:
               data = json.load(f)
       
           versions = data['apps'][0]['versions']
-          version_key = yt_ver
+          version_key = f"{yt_ver}-pre-{short}"
           versions = [v for v in versions if v['version'] != version_key]
       
           new_version = {
@@ -249,6 +256,7 @@ jobs:
               'date': today,
               'localizedDescription': description,
               'downloadURL': download,
+              'buildVersion': build_num,
               'size': size,
               'minOSVersion': '14.0'
           }
@@ -266,7 +274,7 @@ jobs:
         run: |
           TODAY=$(date -u +"%B %-d, %Y")
           YT_VER="${{ steps.cfg.outputs.yt_ver }}"
-          YOUMOD_VER="${{ env.YOUMOD_VERSION }}"
+          YOUMOD_VER="${{ env.YOUMOD_VERSION }} (pre-release ${{ env.YOUMOD_SHORT }})"
 
           sed -i "" \
             -e "s/| \*\*YouTube version\*\* | .* |/| **YouTube version** | $YT_VER |/" \
@@ -279,5 +287,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add apps.json README.md
-          git commit -m "Auto-update: YouMod ${{ env.YOUMOD_VERSION }} for YouTube ${{ steps.cfg.outputs.yt_ver }}"
+          git commit -m "Auto-update: YouMod ${{ env.YOUMOD_VERSION }}-pre-${{ env.YOUMOD_SHORT }} for YouTube ${{ steps.cfg.outputs.yt_ver }}"
           git push
