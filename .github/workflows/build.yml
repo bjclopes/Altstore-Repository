@@ -183,7 +183,6 @@ jobs:
           export YT_VER="${{ steps.cfg.outputs.yt_ver }}"
           export YOUMOD_VERSION="${{ env.YOUMOD_VERSION }}"
           export YOUMOD_SHORT="${{ env.YOUMOD_SHORT }}"
-          export BUILD_NUM="${{ github.run_number }}"
           export IPA_NAME="YouMod_${{ env.YOUMOD_VERSION }}-pre-${{ env.YOUMOD_SHORT }}_${{ steps.cfg.outputs.yt_ver }}.ipa"
           export SIZE="${{ steps.size.outputs.size }}"
           REPO_USER="${{ github.repository_owner }}"
@@ -201,7 +200,6 @@ jobs:
           changelog  = os.environ.get('YOUMOD_CHANGELOG', '').strip()
       
           short      = os.environ.get('YOUMOD_SHORT', '')
-          build_num  = os.environ.get('BUILD_NUM', '')
           description = f"YouTube {yt_ver} + YouMod v{youmod_ver} (pre-release {short})\n\n{changelog}" if changelog else f"Auto-built from YouTube {yt_ver} with YouMod v{youmod_ver} (pre-release {short})"
       
           with open('apps.json') as f:
@@ -216,7 +214,6 @@ jobs:
               'date': today,
               'localizedDescription': description,
               'downloadURL': download,
-              'buildVersion': build_num,
               'size': size,
               'minOSVersion': '14.0'
           }
