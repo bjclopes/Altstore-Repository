@@ -11,7 +11,7 @@ Automated YouMod IPA builds delivered straight to your AltStore, SideStore, or F
 3. Tap **+** and paste the URL below:
 
 ```
-https://raw.githubusercontent.com/MountainofPenguin/Altstore-Repository/main/apps.json
+https://raw.githubusercontent.com/bjclopes/Altstore-Repository/main/apps.json
 ```
 
 4. YouMod will appear under Browse — tap **Get** to install
