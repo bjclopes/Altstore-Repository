@@ -25,8 +25,8 @@ https://raw.githubusercontent.com/bjclopes/Altstore-Repository/main/apps.json
 | Description | Info |
 |---|---|
 | **YouTube version** | 21.45.4 |
-| **YouMod version** | 2.0.0 |
-| **Last built** | November 9, 2026 |
+| **YouMod version** | 2.1.0 (pre-release 8574c53) |
+| **Last built** | November 17, 2026 |
 | **Min iOS** | 14.0 |
 
 ---
