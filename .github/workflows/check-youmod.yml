@@ -1,4 +1,4 @@
-name: Check for new YouMod release
+name: Check for new YouMod pre-release commit
 
 on:
   schedule:
@@ -11,62 +11,74 @@ permissions:
 
 jobs:
   check:
-    name: Check YouMod release
+    name: Check YouMod pre-release branch
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Get latest YouMod release
-        id: youmod
-        run: |
-          LATEST=$(curl -sSf "https://api.github.com/repos/Tonwalter888/YouMod/releases/latest" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
-          echo "latest=$LATEST" >> $GITHUB_OUTPUT
-          echo "Latest YouMod release: $LATEST"
-
-      - name: Get tracked YouMod version from config.yml
+      - name: Get tracked YouMod branch and commit from config.yml
         id: tracked
         run: |
-          TRACKED=$(grep 'youmod_version:' config.yml | sed "s/.*youmod_version:[[:space:]]*['\"]//;s/['\"].*//")
-          echo "version=$TRACKED" >> $GITHUB_OUTPUT
-          echo "Tracked YouMod version: $TRACKED"
+          BRANCH=$(grep 'youmod_branch:' config.yml | sed "s/.*youmod_branch:[[:space:]]*['\"]//;s/['\"].*//")
+          BRANCH=${BRANCH:-pre-release}
+          COMMIT=$(grep 'youmod_commit:' config.yml | sed "s/.*youmod_commit:[[:space:]]*['\"]//;s/['\"].*//")
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+          echo "Tracking branch: $BRANCH (built commit: ${COMMIT:-none})"
 
-      # The build workflow publishes a release tagged v<YouMod version>, so a missing
+      - name: Get latest commit on YouMod branch
+        id: youmod
+        run: |
+          BRANCH="${{ steps.tracked.outputs.branch }}"
+          SHA=$(git ls-remote https://github.com/Tonwalter888/YouMod.git "refs/heads/$BRANCH" | cut -f1)
+          if [ -z "$SHA" ]; then
+            echo "::error::Branch $BRANCH not found in Tonwalter888/YouMod"
+            exit 1
+          fi
+          VERSION=$(curl -sSf "https://raw.githubusercontent.com/Tonwalter888/YouMod/$SHA/control" | grep '^Version:' | cut -d ' ' -f2)
+          SHORT=${SHA:0:7}
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "short=$SHORT" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION-pre-$SHORT" >> $GITHUB_OUTPUT
+          echo "Latest $BRANCH commit: $SHA (YouMod $VERSION)"
+
+      # The build workflow publishes a release tagged v<version>-pre-<sha7>, so a missing
       # release means the previous build never finished. Without this check a single
-      # failed build would stall the repo until the next YouMod release.
-      - name: Check whether this YouMod version was already built
+      # failed build would stall the repo until the next YouMod commit.
+      - name: Check whether this commit was already built
         id: built
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view "v${{ steps.youmod.outputs.latest }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if gh release view "${{ steps.youmod.outputs.tag }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Release v${{ steps.youmod.outputs.latest }} already exists."
+            echo "Release ${{ steps.youmod.outputs.tag }} already exists."
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No release for v${{ steps.youmod.outputs.latest }} yet - a build is needed."
+            echo "No release for ${{ steps.youmod.outputs.tag }} yet - a build is needed."
           fi
 
-      - name: Update config.yml if new version found
-        if: steps.youmod.outputs.latest != steps.tracked.outputs.version
+      - name: Update config.yml if new commit found
+        if: steps.youmod.outputs.sha != steps.tracked.outputs.commit
         run: |
-          LATEST="${{ steps.youmod.outputs.latest }}"
-          TRACKED="${{ steps.tracked.outputs.version }}"
-          echo "New YouMod version detected: $TRACKED -> $LATEST"
-      
-          sed -i "s/youmod_version: ['\"][^'\"]*['\"]/youmod_version: \"$LATEST\"/" config.yml
-      
+          SHA="${{ steps.youmod.outputs.sha }}"
+          VERSION="${{ steps.youmod.outputs.version }}"
+          echo "New YouMod commit detected: ${{ steps.tracked.outputs.commit }} -> $SHA"
+
+          sed -i "s/youmod_version: ['\"][^'\"]*['\"]/youmod_version: \"$VERSION\"/" config.yml
+          sed -i "s/youmod_commit: ['\"][^'\"]*['\"]/youmod_commit: \"$SHA\"/" config.yml
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add config.yml
-          git commit -m "Auto: bump YouMod tracked version to $LATEST"
+          git commit -m "Auto: bump YouMod to ${{ steps.youmod.outputs.short }} ($VERSION pre-release)"
           git push
-      
+
       - name: Trigger build workflow
-        if: steps.youmod.outputs.latest != steps.tracked.outputs.version || steps.built.outputs.exists != 'true'
+        if: steps.youmod.outputs.sha != steps.tracked.outputs.commit || steps.built.outputs.exists != 'true'
         run: |
           curl -sSf -X POST \
             -H "Authorization: Bearer ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}" \
@@ -76,5 +88,5 @@ jobs:
           echo "Build workflow dispatched."
 
       - name: No update needed
-        if: steps.youmod.outputs.latest == steps.tracked.outputs.version && steps.built.outputs.exists == 'true'
-        run: echo "YouMod v${{ steps.tracked.outputs.version }} is already built - nothing to do."
+        if: steps.youmod.outputs.sha == steps.tracked.outputs.commit && steps.built.outputs.exists == 'true'
+        run: echo "YouMod ${{ steps.youmod.outputs.short }} is already built - nothing to do."
