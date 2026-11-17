@@ -22,7 +22,7 @@ https://raw.githubusercontent.com/bjclopes/Altstore-Repository/main/apps.json
 
 ## Currently Supported
 
-| | |
+| Description | Info |
 |---|---|
 | **YouTube version** | 21.45.4 |
 | **YouMod version** | 2.0.0 |
