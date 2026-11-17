@@ -124,34 +124,12 @@ jobs:
           echo "YOUMOD_SHORT=${SHA:0:7}" >> $GITHUB_ENV
           echo "Building YouMod commit $SHA"
 
-      # YTUHD is a YTVideoOverlay plugin: ReloadVideo.x imports ../YTVideoOverlay/Init.x
-      # and its %ctor calls into YTVideoOverlay, so the sources must sit side by side and
-      # YTVideoOverlay.dylib has to be loaded at runtime (otherwise YTUHD crashes on load).
-      - name: Clone YTVideoOverlay
-        run: git clone --quiet --depth=1 https://github.com/PoomSmart/YTVideoOverlay.git
-
-      - name: Clone YTUHD
-        run: git clone --quiet --depth=1 https://github.com/Tonwalter888/YTUHD.git
-
-      - name: Clone Return-YouTube-Dislikes
-        run: git clone --quiet --depth=1 https://github.com/PoomSmart/Return-YouTube-Dislikes.git
-
-      - name: Clone DontEatMyContent
-        run: git clone --quiet --depth=1 https://github.com/therealFoxster/DontEatMyContent.git
-
       - name: Build YouMod
         run: |
           cd YouMod
           echo "YOUMOD_VERSION=$(grep '^Version:' control | cut -d ' ' -f2)" >> $GITHUB_ENV
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
           mv packages/*.deb ${{ github.workspace }}/youmod.deb
-
-      # Runtime dependency of YTUHD (see the Clone YTUHD note above).
-      - name: Build YTVideoOverlay
-        run: |
-          cd YTVideoOverlay
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
-          mv packages/*.deb ${{ github.workspace }}/ytvo.deb
 
       # Pre-release commits have no release notes, so use recent commit messages instead.
       - name: Get YouMod changelog
@@ -160,24 +138,6 @@ jobs:
           echo "YOUMOD_CHANGELOG<<EOF" >> $GITHUB_ENV
           echo "$CHANGELOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
-      - name: Build YTUHD
-        run: |
-          cd YTUHD
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
-          mv packages/*.deb ${{ github.workspace }}/ytuhd.deb
-
-      - name: Build Return-YouTube-Dislikes
-        run: |
-          cd Return-YouTube-Dislikes
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
-          mv packages/*.deb ${{ github.workspace }}/ryd.deb
-
-      - name: Build DontEatMyContent
-        run: |
-          cd DontEatMyContent
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
-          mv packages/*.deb ${{ github.workspace }}/demc.deb
 
       - name: List built debs
         run: ls -lh ${{ github.workspace }}/*.deb
