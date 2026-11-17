@@ -22,7 +22,6 @@
           "date": "2026-11-17",
           "localizedDescription": "YouTube 21.45.4 + YouMod v2.1.0 (pre-release 8574c53)\n\n- Fix Shorts gestures not working\n- Update Settings.x\n- Up\n- Update Settings.x\n- Cleanup\n- Test\n- My bad\n- Correct things and fix rare crashes\n- Fix rare crash\n- Support skip content warning in shorts",
           "downloadURL": "https://github.com/bjclopes/Altstore-Repository/releases/download/v2.1.0-pre-8574c53/YouMod_2.1.0-pre-8574c53_21.45.4.ipa",
-          "buildVersion": "2",
           "size": 155494513,
           "minOSVersion": "14.0"
         },
