@@ -20,9 +20,9 @@
         {
           "version": "21.47.6",
           "date": "2026-11-27",
-          "localizedDescription": "YouTube 21.47.6 + YouMod v2.1.0 (pre-release 8574c53)\n\n- Fix Shorts gestures not working\n- Update Settings.x\n- Up\n- Update Settings.x\n- Cleanup\n- Test\n- My bad\n- Correct things and fix rare crashes\n- Fix rare crash\n- Support skip content warning in shorts",
-          "downloadURL": "https://github.com/bjclopes/Altstore-Repository/releases/download/v2.1.0-pre-8574c53/YouMod_2.1.0-pre-8574c53_21.47.6.ipa",
-          "size": 155494512,
+          "localizedDescription": "YouTube 21.47.6 + YouMod v2.1.0 (pre-release 0473ddb)\n\n- Up\n- Update YM icon\n- Delete Icon.png\n- Update README.md\n- Fix and add new things\n- WIP: speedmaster hold-to-speed, remove glass tab bar, menu/action-sheet rework\n- Remove debugging leftover from DownloadQueue\n- Stacking pills/toasts, hide download pill\n- WIP: glass tab bar fixes, SeekOnFeed setting, sleep timer overlay time\n- fix typo in SABRDownload",
+          "downloadURL": "https://github.com/bjclopes/Altstore-Repository/releases/download/v2.1.0-pre-0473ddb/YouMod_2.1.0-pre-0473ddb_21.47.6.ipa",
+          "size": 155557390,
           "minOSVersion": "14.0"
         },
         {
